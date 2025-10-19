@@ -213,6 +213,37 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
     }
   };
 
+  const handleDeleteCard = async (cardId: number) => {
+    if (!confirm('Вы уверены, что хотите удалить эту карту?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('https://functions.poehali.dev/d5bc3162-5c30-424f-a0a3-f49dfa4df5d3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete_card',
+          card_id: cardId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({ title: 'Карта удалена! ✅', description: 'Карта успешно удалена из системы' });
+        loadAllCards();
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось удалить карту', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 py-8">
       <div className="container mx-auto px-4">
@@ -243,7 +274,7 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
               <Card>
                 <CardHeader>
                   <CardTitle>Все карты пользователей</CardTitle>
-                  <CardDescription>Просмотр всех карт и привязанных телефонов</CardDescription>
+                  <CardDescription>Просмотр реквизитов и управление картами</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -251,23 +282,51 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
                       <p className="text-sm text-muted-foreground">Карты не найдены</p>
                     )}
                     {allCards.map((card) => (
-                      <div key={card.id} className="p-4 border rounded-lg space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{card.first_name} {card.last_name}</p>
-                            <p className="text-sm text-muted-foreground">{card.email}</p>
+                      <div key={card.id} className="p-6 border rounded-lg space-y-4 bg-gradient-to-r from-card to-card/50 hover:shadow-lg transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-3 flex-1">
+                            <div>
+                              <p className="font-bold text-lg">{card.first_name} {card.last_name}</p>
+                              <p className="text-sm text-muted-foreground">{card.email}</p>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Icon name="CreditCard" size={16} className="text-primary" />
+                                <span className="font-mono text-base">{card.card_number}</span>
+                              </div>
+                              
+                              {card.phone && (
+                                <div className="flex items-center gap-2">
+                                  <Icon name="Phone" size={16} className="text-primary" />
+                                  <span className="text-base">{card.phone}</span>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center gap-2">
+                                <Icon name="Wallet" size={16} className="text-primary" />
+                                <span className="text-xl font-bold text-primary">
+                                  {parseFloat(card.balance).toLocaleString('ru-RU')} ₽
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Icon name="Calendar" size={14} />
+                                <span>Создана: {new Date(card.created_at).toLocaleDateString('ru-RU')}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-mono text-sm">{card.card_number}</p>
-                            <p className="text-lg font-bold text-primary">{parseFloat(card.balance).toLocaleString('ru-RU')} ₽</p>
-                          </div>
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteCard(card.id)}
+                            disabled={loading}
+                          >
+                            <Icon name="Trash2" className="mr-2" size={14} />
+                            Удалить
+                          </Button>
                         </div>
-                        {card.phone && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Icon name="Phone" size={14} />
-                            <span>{card.phone}</span>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>

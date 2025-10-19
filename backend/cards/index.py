@@ -234,6 +234,33 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps(dict(card), default=str),
                 'isBase64Encoded': False
             }
+        
+        elif action == 'delete_card':
+            card_id = body_data.get('card_id')
+            
+            cursor.execute(
+                "DELETE FROM cards WHERE id = %s RETURNING *",
+                (card_id,)
+            )
+            deleted_card = cursor.fetchone()
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            if not deleted_card:
+                return {
+                    'statusCode': 404,
+                    'headers': headers,
+                    'body': json.dumps({'error': 'Карта не найдена'}),
+                    'isBase64Encoded': False
+                }
+            
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({'message': 'Карта успешно удалена', 'card': dict(deleted_card)}, default=str),
+                'isBase64Encoded': False
+            }
     
     cursor.close()
     conn.close()
