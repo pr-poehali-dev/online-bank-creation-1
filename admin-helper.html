@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ помощник</title>
+</head>
+<body>
+    <h1>Удаление и создание администратора</h1>
+    <button onclick="deleteAndCreate()">Удалить старого и создать нового администратора</button>
+    <div id="result"></div>
+
+    <script>
+        async function deleteAndCreate() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Обработка...';
+
+            try {
+                // Удаляем старого администратора
+                const deleteResponse = await fetch('https://functions.poehali.dev/d5bc3162-5c30-424f-a0a3-f49dfa4df5d3', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'delete_user',
+                        user_id: 1
+                    })
+                });
+
+                const deleteData = await deleteResponse.json();
+                console.log('Удаление:', deleteData);
+
+                // Создаём нового администратора
+                const createResponse = await fetch('https://functions.poehali.dev/d410a34f-ba7b-4a74-86cb-3e07f90b1bf9', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'register',
+                        email: '11',
+                        password: '11',
+                        first_name: 'Администратор',
+                        last_name: 'Системный',
+                        is_admin: true
+                    })
+                });
+
+                const createData = await createResponse.json();
+                console.log('Создание:', createData);
+
+                resultDiv.innerHTML = `
+                    <p>✅ Старый администратор удалён</p>
+                    <p>✅ Новый администратор создан</p>
+                    <p>Логин: 11</p>
+                    <p>Пароль: 11</p>
+                `;
+
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Ошибка: ${error.message}`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
