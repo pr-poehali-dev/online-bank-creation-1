@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface UserDashboardProps {
   user: any;
@@ -17,11 +18,14 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
+  const [allCards, setAllCards] = useState<any[]>([]);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
 
   useEffect(() => {
     loadCards();
     if (user.is_admin) {
       loadUsers();
+      loadAllCards();
     }
   }, [user]);
 
@@ -47,12 +51,64 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
     }
   };
 
+  const loadAllCards = async () => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/d5bc3162-5c30-424f-a0a3-f49dfa4df5d3?action=all_cards');
+      if (response.ok) {
+        const data = await response.json();
+        setAllCards(data);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки всех карт:', error);
+    }
+  };
+
+  const handleLinkPhone = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const phone = formData.get('phone') as string;
+
+    if (cards.length === 0) {
+      toast({ title: 'Ошибка', description: 'У вас нет карты', variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('https://functions.poehali.dev/d5bc3162-5c30-424f-a0a3-f49dfa4df5d3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'link_phone',
+          card_id: cards[0].id,
+          phone
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({ title: 'Телефон привязан! ✅', description: `Номер ${phone} привязан к карте` });
+        loadCards();
+        setPhoneDialogOpen(false);
+      } else {
+        toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось привязать телефон', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTransfer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const to_card_number = formData.get('to-card') as string;
+    const to_identifier = formData.get('to-identifier') as string;
     const amount = parseFloat(formData.get('amount') as string);
     const description = formData.get('description') as string;
 
@@ -69,7 +125,7 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
         body: JSON.stringify({
           action: 'transfer',
           from_card_number: cards[0].card_number,
-          to_card_number,
+          to_identifier,
           amount,
           description
         })
@@ -109,6 +165,9 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
       if (response.ok) {
         toast({ title: 'Карта создана! 🎉', description: `Номер: ${data.card_number}` });
         loadCards();
+        if (user.is_admin) {
+          loadAllCards();
+        }
       } else {
         toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
       }
@@ -142,7 +201,7 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
 
       if (response.ok) {
         toast({ title: 'Баланс пополнен! ✅', description: `+${amount} ₽` });
-        loadCards();
+        loadAllCards();
         (e.target as HTMLFormElement).reset();
       } else {
         toast({ title: 'Ошибка', description: data.error, variant: 'destructive' });
@@ -173,40 +232,75 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
         </div>
 
         {user.is_admin ? (
-          <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
+          <Tabs defaultValue="cards" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsTrigger value="cards">Все карты</TabsTrigger>
               <TabsTrigger value="users">Пользователи</TabsTrigger>
-              <TabsTrigger value="balance">Пополнение баланса</TabsTrigger>
+              <TabsTrigger value="balance">Пополнение</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="users">
-              <div className="grid gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Управление картами пользователей</CardTitle>
-                    <CardDescription>Создавайте карты для пользователей банка</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {users.length === 0 && (
-                        <p className="text-sm text-muted-foreground">Пользователи не найдены</p>
-                      )}
-                      {users.map((u) => (
-                        <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+            <TabsContent value="cards">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Все карты пользователей</CardTitle>
+                  <CardDescription>Просмотр всех карт и привязанных телефонов</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {allCards.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Карты не найдены</p>
+                    )}
+                    {allCards.map((card) => (
+                      <div key={card.id} className="p-4 border rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{u.first_name} {u.last_name}</p>
-                            <p className="text-sm text-muted-foreground">{u.email}</p>
+                            <p className="font-medium">{card.first_name} {card.last_name}</p>
+                            <p className="text-sm text-muted-foreground">{card.email}</p>
                           </div>
-                          <Button onClick={() => handleCreateCard(u.id, 0)} disabled={loading}>
-                            <Icon name="CreditCard" className="mr-2" size={16} />
-                            Создать карту
-                          </Button>
+                          <div className="text-right">
+                            <p className="font-mono text-sm">{card.card_number}</p>
+                            <p className="text-lg font-bold text-primary">{parseFloat(card.balance).toLocaleString('ru-RU')} ₽</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        {card.phone && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Icon name="Phone" size={14} />
+                            <span>{card.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="users">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Управление картами пользователей</CardTitle>
+                  <CardDescription>Создавайте карты для пользователей банка</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {users.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Пользователи не найдены</p>
+                    )}
+                    {users.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{u.first_name} {u.last_name}</p>
+                          <p className="text-sm text-muted-foreground">{u.email}</p>
+                        </div>
+                        <Button onClick={() => handleCreateCard(u.id, 0)} disabled={loading}>
+                          <Icon name="CreditCard" className="mr-2" size={16} />
+                          Создать карту
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="balance">
@@ -259,10 +353,22 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
           <div className="grid lg:grid-cols-2 gap-6">
             <Card className="bg-gradient-to-br from-primary to-secondary text-white">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="CreditCard" size={24} />
-                  Моя карта
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="CreditCard" size={24} />
+                    Моя карта
+                  </CardTitle>
+                  {cards.length > 0 && !cards[0].phone && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPhoneDialogOpen(true)}
+                    >
+                      <Icon name="Phone" className="mr-2" size={14} />
+                      Привязать телефон
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {cards.length === 0 ? (
@@ -284,6 +390,12 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
                         {cards[0].card_number}
                       </p>
                       <p className="text-lg">{cards[0].card_holder}</p>
+                      {cards[0].phone && (
+                        <div className="flex items-center gap-2 text-white/80">
+                          <Icon name="Phone" size={16} />
+                          <span>{cards[0].phone}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="pt-4 border-t border-white/20">
                       <p className="text-white/80 text-sm mb-1">Баланс</p>
@@ -300,19 +412,22 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
                   <Icon name="ArrowRightLeft" size={24} />
                   Перевод средств
                 </CardTitle>
-                <CardDescription>Переведите деньги на другую карту</CardDescription>
+                <CardDescription>Переведите деньги по номеру карты или телефона</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleTransfer} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="to-card">Номер карты получателя</Label>
+                    <Label htmlFor="to-identifier">Номер карты или телефона</Label>
                     <Input
-                      id="to-card"
-                      name="to-card"
-                      placeholder="1234 5678 9012 3456"
+                      id="to-identifier"
+                      name="to-identifier"
+                      placeholder="1234 5678 9012 3456 или +79001234567"
                       required
                       disabled={cards.length === 0}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Введите номер карты (16 цифр) или номер телефона получателя
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="amount">Сумма перевода</Label>
@@ -358,6 +473,42 @@ const UserDashboard = ({ user, onLogout }: UserDashboardProps) => {
           </div>
         )}
       </div>
+
+      <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Привязать номер телефона</DialogTitle>
+            <DialogDescription>
+              Привяжите номер телефона к карте для получения переводов
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleLinkPhone} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Номер телефона</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="+79001234567"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Icon name="Loader2" className="mr-2 animate-spin" size={16} />
+                  Привязка...
+                </>
+              ) : (
+                <>
+                  <Icon name="Phone" className="mr-2" size={16} />
+                  Привязать телефон
+                </>
+              )}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

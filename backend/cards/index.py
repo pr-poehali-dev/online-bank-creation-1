@@ -42,6 +42,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if method == 'GET':
         params = event.get('queryStringParameters', {}) or {}
         user_id = params.get('user_id')
+        action = params.get('action')
+        
+        if action == 'all_cards':
+            cursor.execute(
+                "SELECT c.*, u.first_name, u.last_name, u.email FROM cards c JOIN users u ON c.user_id = u.id"
+            )
+            cards = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps([dict(card) for card in cards], default=str),
+                'isBase64Encoded': False
+            }
         
         if user_id:
             cursor.execute(
@@ -102,16 +118,47 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
+        elif action == 'link_phone':
+            card_id = body_data.get('card_id')
+            phone = body_data.get('phone')
+            
+            cursor.execute(
+                "UPDATE cards SET phone = %s WHERE id = %s RETURNING *",
+                (phone, card_id)
+            )
+            card = cursor.fetchone()
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            if not card:
+                return {
+                    'statusCode': 404,
+                    'headers': headers,
+                    'body': json.dumps({'error': 'Карта не найдена'}),
+                    'isBase64Encoded': False
+                }
+            
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps(dict(card), default=str),
+                'isBase64Encoded': False
+            }
+        
         elif action == 'transfer':
             from_card_number = body_data.get('from_card_number')
-            to_card_number = body_data.get('to_card_number')
+            to_identifier = body_data.get('to_identifier')
             amount = float(body_data.get('amount', 0))
             description = body_data.get('description', '')
             
             cursor.execute("SELECT * FROM cards WHERE card_number = %s", (from_card_number,))
             from_card = cursor.fetchone()
             
-            cursor.execute("SELECT * FROM cards WHERE card_number = %s", (to_card_number,))
+            cursor.execute(
+                "SELECT * FROM cards WHERE card_number = %s OR phone = %s",
+                (to_identifier, to_identifier)
+            )
             to_card = cursor.fetchone()
             
             if not from_card or not to_card:
