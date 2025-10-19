@@ -307,52 +307,6 @@ const Index = () => {
           ))}
         </div>
       </section>
-
-      <footer className="bg-card/50 backdrop-blur border-t border-border mt-20">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Icon name="Landmark" className="text-white" size={24} />
-                </div>
-                <span className="text-xl font-bold">NeoBанк</span>
-              </div>
-              <p className="text-sm text-muted-foreground">Банк будущего уже сегодня</p>
-            </div>
-            
-            {[
-              { title: 'Продукты', items: ['Карты', 'Кредиты', 'Вклады', 'Инвестиции'] },
-              { title: 'Компания', items: ['О нас', 'Карьера', 'Блог', 'Пресса'] },
-              { title: 'Поддержка', items: ['Контакты', 'FAQ', 'Тарифы', 'Безопасность'] },
-            ].map((column, i) => (
-              <div key={i}>
-                <h3 className="font-semibold mb-4">{column.title}</h3>
-                <ul className="space-y-2">
-                  {column.items.map((item, j) => (
-                    <li key={j}>
-                      <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                        {item}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          
-          <div className="border-t border-border mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground">© 2024 NeoBанк. Все права защищены.</p>
-            <div className="flex gap-4">
-              {['Facebook', 'Twitter', 'Instagram', 'Linkedin'].map((social) => (
-                <a key={social} href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                  <Icon name={social as any} size={20} />
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
