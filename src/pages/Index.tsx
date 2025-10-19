@@ -307,6 +307,12 @@ const Index = () => {
           ))}
         </div>
       </section>
+
+      <footer className="bg-card/50 backdrop-blur border-t border-border py-6">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-sm text-muted-foreground">Все права защищены © 2025</p>
+        </div>
+      </footer>
     </div>
   );
 };
