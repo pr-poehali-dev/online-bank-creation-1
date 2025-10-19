@@ -64,7 +64,7 @@ const Index = () => {
             </div>
             
             <div className="hidden md:flex gap-6">
-              {['Главная', 'Кредиты', 'Вклады', 'Карты', 'Переводы', 'Поддержка', 'Контакты'].map((item) => (
+              {['Главная', 'Кредиты'].map((item) => (
                 <button
                   key={item}
                   onClick={() => setActiveSection(item.toLowerCase())}
