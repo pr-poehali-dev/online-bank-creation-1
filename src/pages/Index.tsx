@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import AuthModal from '@/components/AuthModal';
+import UserDashboard from '@/components/UserDashboard';
 
 const Index = () => {
   const { toast } = useToast();
   const [activeSection, setActiveSection] = useState('home');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    toast({ title: 'Вы вышли из системы' });
+  };
+
+  if (user) {
+    return <UserDashboard user={user} onLogout={handleLogout} />;
+  }
 
   const handleLoanApplication = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +76,10 @@ const Index = () => {
               ))}
             </div>
 
-            <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+            <Button
+              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+              onClick={() => setAuthModalOpen(true)}
+            >
               Войти
             </Button>
           </div>
@@ -313,6 +337,12 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">Все права защищены © 2025</p>
         </div>
       </footer>
+
+      <AuthModal
+        open={authModalOpen}
+        onOpenChange={setAuthModalOpen}
+        onSuccess={setUser}
+      />
     </div>
   );
 };
