@@ -20,17 +20,63 @@ const Index = () => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
+    } else {
+      setAuthModalOpen(true);
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     setUser(null);
+    setAuthModalOpen(true);
     toast({ title: 'Вы вышли из системы' });
   };
 
   if (user) {
     return <UserDashboard user={user} onLogout={handleLogout} />;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 flex items-center justify-center p-4">
+        <AuthModal 
+          open={authModalOpen} 
+          onOpenChange={(open) => {
+            if (!user) {
+              setAuthModalOpen(true);
+            } else {
+              setAuthModalOpen(open);
+            }
+          }} 
+          onSuccess={setUser} 
+        />
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                <Icon name="Landmark" className="text-white" size={32} />
+              </div>
+            </div>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              NeoBанк
+            </CardTitle>
+            <CardDescription className="text-lg mt-2">
+              Для доступа к системе необходимо войти
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+              onClick={() => setAuthModalOpen(true)}
+              size="lg"
+            >
+              <Icon name="LogIn" className="mr-2" size={20} />
+              Войти в систему
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const handleLoanApplication = (e: React.FormEvent) => {
